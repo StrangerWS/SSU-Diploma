@@ -1,12 +1,13 @@
 package com.strangerws.ssu.edu.textanalyzer.util;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-public class Dataset<D extends Object, R extends Object> {
-    private List<Entry<D, R>> data;
+public class Dataset{
+    private List<Entry> data;
 
-    public void setDataset(List<D> data, List<R> result){
+    public void setDataset(List<byte[]> data, List<Character> result){
         if(data.size() != result.size()){
             throw new RuntimeException("arrays length do not match each other");
         }
@@ -17,12 +18,16 @@ public class Dataset<D extends Object, R extends Object> {
 
     }
 
+    public Iterator<Entry> iterator(){
+        return data.iterator();
+    }
+
     public Dataset() {
         this.data = new ArrayList<>();
     }
 
-    public void appendEntry(D data, R result){
-        this.data.add(new Entry<>(data, result));
+    public void appendEntry(byte[] data, Character result){
+        this.data.add(new Entry(data, result));
     }
     public void appendEntry(Entry entry){
         this.data.add(entry);
@@ -32,32 +37,32 @@ public class Dataset<D extends Object, R extends Object> {
         return data.size();
     }
 
-    public Entry<D, R> get(int index){
+    public Entry get(int index){
         return data.get(index);
     }
 
-    public static class Entry<D, R>{
-        private D data;
-        private R result;
+    public static class Entry{
+        private byte[] data;
+        private Character result;
 
-        public Entry(D data, R result) {
+        public Entry(byte[] data, Character result) {
             this.data = data;
             this.result = result;
         }
 
-        public D getData() {
+        public byte[] getData() {
             return data;
         }
 
-        public void setData(D data) {
+        public void setData(byte[] data) {
             this.data = data;
         }
 
-        public R getResult() {
+        public Character getResult() {
             return result;
         }
 
-        public void setResult(R result) {
+        public void setResult(Character result) {
             this.result = result;
         }
     }

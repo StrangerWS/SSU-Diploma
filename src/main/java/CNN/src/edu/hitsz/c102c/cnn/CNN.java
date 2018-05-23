@@ -109,7 +109,7 @@ public class CNN implements Serializable {
             if (trainset.size() % batchSize != 0)
                 epochsNum++; // More than one extraction, ie rounding up
             Log.i("");
-            Log.i(t + "th iter epochsNum:" + epochsNum);
+            Log.i(t + "th iterator epochsNum:" + epochsNum);
             int right = 0;
             int count = 0;
             for (int i = 0; i < epochsNum; i++) {

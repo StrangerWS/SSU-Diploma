@@ -1,10 +1,11 @@
 package com.strangerws.ssu.edu.textanalyzer.neuralnet;
 
-import CNN.src.edu.hitsz.c102c.dataset.Dataset;
+
 import CNN.src.edu.hitsz.c102c.util.ConcurenceRunner;
 import CNN.src.edu.hitsz.c102c.util.Log;
 import com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size;
 import com.strangerws.ssu.edu.textanalyzer.neuralnet.element.Layer;
+import com.strangerws.ssu.edu.textanalyzer.util.Dataset;
 import com.strangerws.ssu.edu.textanalyzer.util.Utils;
 
 import java.io.File;
@@ -82,7 +83,7 @@ public class NeuralNet implements Serializable {
             if (trainset.size() % batchSize != 0)
                 epochsNum++; // More than one extraction, ie rounding up
             Log.i("");
-            Log.i(t + "th iter epochsNum:" + epochsNum);
+            Log.i(t + "th iterator epochsNum:" + epochsNum);
             int right = 0;
             int count = 0;
             for (int i = 0; i < epochsNum; i++) {
@@ -90,7 +91,7 @@ public class NeuralNet implements Serializable {
                 Layer.resetBatch();
 
                 for (int index : randPerm) {
-                    boolean isRight = train(trainset.getRecord(index));
+                    boolean isRight = train(trainset.get(index));
                     if (isRight)
                         right++;
                     count++;
@@ -148,10 +149,10 @@ public class NeuralNet implements Serializable {
 
     public double test(Dataset trainset) {
         Layer.resetBatch();
-        Iterator<Dataset.Record> iter = trainset.iter();
+        Iterator<Dataset.Entry> iter = trainset.iterator();
         int right = 0;
         while (iter.hasNext()) {
-            Dataset.Record record = iter.next();
+            Dataset.Entry record = iter.next();
             forward(record);
             Layer outputLayer = layers.get(layerNum - 1);
             int mapNum = outputLayer.getOutputCount();
@@ -160,7 +161,7 @@ public class NeuralNet implements Serializable {
                 double[][] outmap = outputLayer.getMap(m);
                 out[m] = outmap[0][0];
             }
-            if (record.getLable().intValue() == Utils.getMaxIndex(out))
+            if (record.getResult() == Utils.getMaxIndex(out))
                 right++;
         }
         double p = 1.0 * right / trainset.size();
@@ -181,9 +182,9 @@ public class NeuralNet implements Serializable {
             int max = layers.get(layerNum - 1).getClassNum();
             PrintWriter writer = new PrintWriter(new File(fileName));
             Layer.resetBatch();
-            Iterator<Dataset.Record> iter = testset.iter();
+            Iterator<Dataset.Entry> iter = testset.iterator();
             while (iter.hasNext()) {
-                Dataset.Record record = iter.next();
+                Dataset.Entry record = iter.next();
                 forward(record);
                 Layer outputLayer = layers.get(layerNum - 1);
 
@@ -227,7 +228,7 @@ public class NeuralNet implements Serializable {
      * @return
      */
 
-    private boolean train(Dataset.Record record) {
+    private boolean train(Dataset.Entry record) {
         forward(record);
         boolean result = backPropagation(record);
         return result;
@@ -239,7 +240,7 @@ public class NeuralNet implements Serializable {
     Reverse transmission
         */
 
-    private boolean backPropagation(Dataset.Record record) {
+    private boolean backPropagation(Dataset.Entry record) {
         boolean result = setOutLayerErrors(record);
         setHiddenLayerErrors();
         return result;
@@ -459,7 +460,7 @@ public class NeuralNet implements Serializable {
      * @return
      */
 
-    private boolean setOutLayerErrors(Dataset.Record record) {
+    private boolean setOutLayerErrors(Dataset.Entry record) {
 
         Layer outputLayer = layers.get(layerNum - 1);
         int mapNum = outputLayer.getOutputCount();
@@ -471,7 +472,7 @@ public class NeuralNet implements Serializable {
             outmaps[m] = outmap[0][0];
 
         }
-        int lable = record.getLable().intValue();
+        Character lable = record.getResult();
         target[lable] = 1;
         for (int m = 0; m < mapNum; m++) {
             outputLayer.setError(m, 0, 0, outmaps[m] * (1 - outmaps[m])
@@ -488,7 +489,7 @@ public class NeuralNet implements Serializable {
      * @param record
      */
 
-    private void forward(Dataset.Record record) {
+    private void forward(Dataset.Entry record) {
         // Set the input layer's map
         setInLayerOutput(record);
         for (int l = 1; l < layers.size(); l++) {
@@ -519,13 +520,13 @@ public class NeuralNet implements Serializable {
      * of the
      * input layer
      *
-     * @param record
+     * @param entry
      */
 
-    private void setInLayerOutput(Dataset.Record record) {
+    private void setInLayerOutput(Dataset.Entry entry) {
         final Layer inputLayer = layers.get(0);
         final Size mapSize = inputLayer.getSize();
-        final double[] attr = record.getAttrs();
+        final byte[] attr = entry.getData();
         if (attr.length != mapSize.x * mapSize.y)
             throw new RuntimeException(" The size of the data record does not match the defined map size! ");
         for (int i = 0; i < mapSize.x; i++) {
