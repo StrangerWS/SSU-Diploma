@@ -1,5 +1,9 @@
 package com.strangerws.ssu.edu.textanalyzer.parser;
 
+import com.strangerws.ssu.edu.textanalyzer.neuralnet.LayerBuilder;
+import com.strangerws.ssu.edu.textanalyzer.neuralnet.NeuralNet;
+import com.strangerws.ssu.edu.textanalyzer.neuralnet.element.Layer;
+import com.strangerws.ssu.edu.textanalyzer.util.Dataset;
 import org.bytedeco.javacpp.Loader;
 import org.bytedeco.javacpp.opencv_core.*;
 import org.bytedeco.javacpp.opencv_imgproc;
@@ -14,6 +18,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -25,7 +30,6 @@ import static org.bytedeco.javacpp.opencv_imgproc.*;
 
 public class App {
     private final static String IMAGEPATH = "C:\\Users\\Artem_Dobrynin\\IdeaProjects\\TextAnalyzer\\src\\main\\resources\\sample\\test.png";
-    private final static String[] DIGITS = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
 
     public static BufferedImage IplImageToBufferedImage(IplImage src) {
         OpenCVFrameConverter.ToIplImage grabberConverter = new OpenCVFrameConverter.ToIplImage();
@@ -92,16 +96,20 @@ public class App {
         Mat result = new Mat(image);
         Collections.sort(rects, new RectComparator());
 
-        List<Mat> letters = new ArrayList<>();
+        List<byte[]> letters = new ArrayList<>();
 
         for (int i = 0; i < rects.size(); i++) {
             Rect rect = rects.get(i);
             Mat letter = new Mat(dilated).apply(rect);
             //imshow(letter);
             //copyMakeBorder(letter, letter, 10, 10, 10, 10, BORDER_CONSTANT, new Scalar(0, 0, 0, 0));
-            resize(letter, letter, new Size(45, 45), 0, 0, INTER_CUBIC);
+            resize(letter, letter, new Size(28, 28), 0, 0, INTER_CUBIC);
 
-            letters.add(letter);
+
+            byte tmp[] = new byte[letter.cols()*letter.rows()];
+            letter.data().get(tmp);
+            System.out.println(tmp.length);
+            letters.add(tmp);
 
             //TODO
             //Set input image to mat
@@ -109,8 +117,23 @@ public class App {
             //Send letters by one and print it
         }
 
+
+        Dataset<byte[], Character> dataset = new Dataset<>();
+        dataset.setDataset(letters, Arrays.asList('H','a','l','l','o','w','!','.','I','a','m','M','i','.','n','h','a','s','K','a','m','a','l','!','.'));
+
+        LayerBuilder builder = new LayerBuilder();
+        builder
+                .addLayer(Layer.buildInputLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(28, 28)))
+                .addLayer(Layer.buildConvolutionalLayer(6, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5, 5)))
+                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2,2)))
+                .addLayer(Layer.buildConvolutionalLayer(12, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5,5)))
+                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2, 2)))
+                .addLayer(Layer.buildOutputLayer(10));
+        NeuralNet cnn = new NeuralNet(builder, 50);
+
         imshow(result);//save final result
     }
+
     private static void imshow(Mat img) {
         CanvasFrame canvasFrame = new CanvasFrame("Preview");
         canvasFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);

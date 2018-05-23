@@ -1,8 +1,9 @@
 package com.strangerws.ssu.edu.textanalyzer.neuralnet.element;
 
-import com.strangerws.ssu.edu.textanalyzer.neuralnet.api.LayerType;
-import com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size;
+import com.strangerws.ssu.edu.textanalyzer.neuralnet.api.*;
 import com.strangerws.ssu.edu.textanalyzer.util.Utils;
+
+import java.io.Serializable;
 
 /**
  * Класс, создающий слои для нейросети. Может создавать входные, выходные, свёрточные и обычные слои
@@ -12,7 +13,7 @@ import com.strangerws.ssu.edu.textanalyzer.util.Utils;
  * @see LayerType
  * @see Size
  */
-public class Layer {
+public class Layer implements Serializable {
     /**
      * Количество записанных итераций по текущей выборке
      */
@@ -386,4 +387,5 @@ public class Layer {
     public double[][][][] getKernel() {
         return kernel;
     }
+
 }

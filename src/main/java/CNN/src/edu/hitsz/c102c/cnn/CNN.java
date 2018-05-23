@@ -1,11 +1,4 @@
-package com.strangerws.ssu.edu.textanalyzer.neuralnet;
-
-import CNN.src.edu.hitsz.c102c.dataset.Dataset;
-import CNN.src.edu.hitsz.c102c.util.ConcurenceRunner;
-import CNN.src.edu.hitsz.c102c.util.Log;
-import com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size;
-import com.strangerws.ssu.edu.textanalyzer.neuralnet.element.Layer;
-import com.strangerws.ssu.edu.textanalyzer.util.Utils;
+package CNN.src.edu.hitsz.c102c.cnn;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,16 +8,24 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.strangerws.ssu.edu.textanalyzer.util.Utils.*;
+import CNN.src.edu.hitsz.c102c.cnn.Layer.Size;
+import CNN.src.edu.hitsz.c102c.dataset.Dataset;
+import CNN.src.edu.hitsz.c102c.dataset.Dataset.Record;
+import CNN.src.edu.hitsz.c102c.util.ConcurenceRunner.TaskManager;
+import CNN.src.edu.hitsz.c102c.util.Log;
+import CNN.src.edu.hitsz.c102c.util.Util;
+import CNN.src.edu.hitsz.c102c.util.Util.Operator;
 
-public class NeuralNet implements Serializable {
+public class CNN implements Serializable {
     /**
      *
      */
+    private static final long serialVersionUID = 337920299147929932L;
     private static double ALPHA = 0.85;
     protected static final double LAMBDA = 0;
     // The layers of the network
@@ -35,37 +36,63 @@ public class NeuralNet implements Serializable {
     // The size of the batch update
     private int batchSize;
     // Divisor operator, divides each element of the matrix by a value
-    private Operator divideBatchSize;
+    private Operator divide_batchSize;
 
     // Multiplier operator, multiplying each element of the matrix by an alpha value
-    private Operator multiplyAlpha;
+    private Operator multiply_alpha;
 
     // Multiplier operator, multiplying each element of the matrix by 1-labmda*alpha
-    private Operator multiplyLambda;
-
-    private static AtomicBoolean stopTrain;
-
+    private Operator multiply_lambda;
 
     /**
      * Initialize the network
      *
      * @param layerBuilder Network layer
      */
-    public NeuralNet(LayerBuilder layerBuilder, final int batchSize) {
-        layers = layerBuilder.getLayers();
+    public CNN(LayerBuilder layerBuilder, final int batchSize) {
+        layers = layerBuilder.mLayers;
         layerNum = layers.size();
         this.batchSize = batchSize;
         setup(batchSize);
-        initOperator();
+        initPerator();
     }
 
     /**
      * Initialization operator
      */
-    private void initOperator() {
-        divideBatchSize = (double value) -> value / batchSize;
-        multiplyAlpha = (double value) -> value * ALPHA;
-        multiplyLambda = (double value) -> value * (1 - LAMBDA * ALPHA);
+    private void initPerator() {
+        divide_batchSize = new Operator() {
+
+            private static final long serialVersionUID = 7424011281732651055L;
+
+            @Override
+            public double process(double value) {
+                return value / batchSize;
+            }
+
+        };
+        multiply_alpha = new Operator() {
+
+            private static final long serialVersionUID = 5761368499808006552L;
+
+            @Override
+            public double process(double value) {
+
+                return value * ALPHA;
+            }
+
+        };
+        multiply_lambda = new Operator() {
+
+            private static final long serialVersionUID = 4499087728362870577L;
+
+            @Override
+            public double process(double value) {
+
+                return value * (1 - LAMBDA * ALPHA);
+            }
+
+        };
     }
 
     /**
@@ -76,7 +103,7 @@ public class NeuralNet implements Serializable {
      */
     public void train(Dataset trainset, int repeat) {
         // Monitor stop button
-        new Listener().start();
+        new Lisenter().start();
         for (int t = 0; t < repeat && !stopTrain.get(); t++) {
             int epochsNum = trainset.size() / batchSize;
             if (trainset.size() % batchSize != 0)
@@ -86,15 +113,15 @@ public class NeuralNet implements Serializable {
             int right = 0;
             int count = 0;
             for (int i = 0; i < epochsNum; i++) {
-                int[] randPerm = Utils.randomPerm(trainset.size(), batchSize);
-                Layer.resetBatch();
+                int[] randPerm = Util.randomPerm(trainset.size(), batchSize);
+                Layer.prepareForNewBatch();
 
                 for (int index : randPerm) {
                     boolean isRight = train(trainset.getRecord(index));
                     if (isRight)
                         right++;
                     count++;
-                    Layer.incrementBatch();
+                    Layer.prepareForNewRecord();
                 }
 
                 // Update weight after running a batch
@@ -114,8 +141,10 @@ public class NeuralNet implements Serializable {
         }
     }
 
-    static class Listener extends Thread {
-        Listener() {
+    private static AtomicBoolean stopTrain;
+
+    static class Lisenter extends Thread {
+        Lisenter() {
             setDaemon(true);
             stopTrain = new AtomicBoolean(false);
         }
@@ -134,7 +163,7 @@ public class NeuralNet implements Serializable {
                     e.printStackTrace();
                 }
             }
-            System.out.println("Listener stop");
+            System.out.println("Lisenter stop");
         }
 
     }
@@ -147,20 +176,20 @@ public class NeuralNet implements Serializable {
      */
 
     public double test(Dataset trainset) {
-        Layer.resetBatch();
-        Iterator<Dataset.Record> iter = trainset.iter();
+        Layer.prepareForNewBatch();
+        Iterator<Record> iter = trainset.iter();
         int right = 0;
         while (iter.hasNext()) {
-            Dataset.Record record = iter.next();
+            Record record = iter.next();
             forward(record);
             Layer outputLayer = layers.get(layerNum - 1);
-            int mapNum = outputLayer.getOutputCount();
+            int mapNum = outputLayer.getOutMapNum();
             double[] out = new double[mapNum];
             for (int m = 0; m < mapNum; m++) {
                 double[][] outmap = outputLayer.getMap(m);
                 out[m] = outmap[0][0];
             }
-            if (record.getLable().intValue() == Utils.getMaxIndex(out))
+            if (record.getLable().intValue() == Util.getMaxIndex(out))
                 right++;
         }
         double p = 1.0 * right / trainset.size();
@@ -180,20 +209,25 @@ public class NeuralNet implements Serializable {
         try {
             int max = layers.get(layerNum - 1).getClassNum();
             PrintWriter writer = new PrintWriter(new File(fileName));
-            Layer.resetBatch();
-            Iterator<Dataset.Record> iter = testset.iter();
+            Layer.prepareForNewBatch();
+            Iterator<Record> iter = testset.iter();
             while (iter.hasNext()) {
-                Dataset.Record record = iter.next();
+                Record record = iter.next();
                 forward(record);
                 Layer outputLayer = layers.get(layerNum - 1);
 
-                int mapNum = outputLayer.getOutputCount();
+                int mapNum = outputLayer.getOutMapNum();
                 double[] out = new double[mapNum];
                 for (int m = 0; m < mapNum; m++) {
                     double[][] outmap = outputLayer.getMap(m);
                     out[m] = outmap[0][0];
                 }
-                int lable = Utils.getMaxIndex(out);
+                // int lable =
+                // Util.binaryArray2int(out);
+                int lable = Util.getMaxIndex(out);
+                // if (lable >= max)
+                // lable = lable - (1 << (out.length -
+                // 1));
                 writer.write(lable + "\n");
             }
             writer.flush();
@@ -227,7 +261,7 @@ public class NeuralNet implements Serializable {
      * @return
      */
 
-    private boolean train(Dataset.Record record) {
+    private boolean train(Record record) {
         forward(record);
         boolean result = backPropagation(record);
         return result;
@@ -239,7 +273,7 @@ public class NeuralNet implements Serializable {
     Reverse transmission
         */
 
-    private boolean backPropagation(Dataset.Record record) {
+    private boolean backPropagation(Record record) {
         boolean result = setOutLayerErrors(record);
         setHiddenLayerErrors();
         return result;
@@ -254,10 +288,10 @@ public class NeuralNet implements Serializable {
             Layer layer = layers.get(l);
             Layer lastLayer = layers.get(l - 1);
             switch (layer.getType()) {
-                case CONVOLUTIONAL:
-                case OUTPUT:
+                case conv:
+                case output:
                     updateKernels(layer, lastLayer);
-                    updateBias(layer);
+                    updateBias(layer, lastLayer);
                     break;
                 default:
                     break;
@@ -269,20 +303,21 @@ public class NeuralNet implements Serializable {
      * Update bias
      *
      * @param layer
+     * @param lastLayer
      */
 
-    private void updateBias(final Layer layer) {
+    private void updateBias(final Layer layer, Layer lastLayer) {
         final double[][][][] errors = layer.getErrors();
-        int mapNum = layer.getOutputCount();
+        int mapNum = layer.getOutMapNum();
 
-        new ConcurenceRunner.TaskManager(mapNum) {
+        new TaskManager(mapNum) {
 
             @Override
             public void process(int start, int end) {
                 for (int j = start; j < end; j++) {
-                    double[][] error = Utils.sum(errors, j);
+                    double[][] error = Util.sum(errors, j);
                     // Update bias
-                    double deltaBias = Utils.sum(error) / batchSize;
+                    double deltaBias = Util.sum(error) / batchSize;
                     double bias = layer.getBias(j) + ALPHA * deltaBias;
                     layer.setBias(j, bias);
                 }
@@ -302,9 +337,9 @@ public class NeuralNet implements Serializable {
      */
 
     private void updateKernels(final Layer layer, final Layer lastLayer) {
-        int mapNum = layer.getOutputCount();
-        final int lastMapNum = lastLayer.getOutputCount();
-        new ConcurenceRunner.TaskManager(mapNum) {
+        int mapNum = layer.getOutMapNum();
+        final int lastMapNum = lastLayer.getOutMapNum();
+        new TaskManager(mapNum) {
 
             @Override
             public void process(int start, int end) {
@@ -315,22 +350,22 @@ public class NeuralNet implements Serializable {
                         for (int r = 0; r < batchSize; r++) {
                             double[][] error = layer.getError(r, j);
                             if (deltaKernel == null)
-                                deltaKernel = Utils.convnValid(
+                                deltaKernel = Util.convnValid(
                                         lastLayer.getMap(r, i), error);
                             else { // cumulative summation
-                                deltaKernel = Utils.matrixOp(Utils.convnValid(
+                                deltaKernel = Util.matrixOp(Util.convnValid(
                                         lastLayer.getMap(r, i), error),
-                                        deltaKernel, null, null, Utils.plus);
+                                        deltaKernel, null, null, Util.plus);
                             }
                         }
 
                         // Divide by batchSize
-                        deltaKernel = Utils.matrixOp(deltaKernel,
-                                divideBatchSize);
+                        deltaKernel = Util.matrixOp(deltaKernel,
+                                divide_batchSize);
                         // Update the convolution kernel
                         double[][] kernel = layer.getKernel(i, j);
-                        deltaKernel = Utils.matrixOp(kernel, deltaKernel,
-                                multiplyLambda, multiplyAlpha, Utils.plus);
+                        deltaKernel = Util.matrixOp(kernel, deltaKernel,
+                                multiply_lambda, multiply_alpha, Util.plus);
                         layer.setKernel(i, j, deltaKernel);
                     }
                 }
@@ -353,15 +388,15 @@ public class NeuralNet implements Serializable {
             Layer layer = layers.get(l);
             Layer nextLayer = layers.get(l + 1);
             switch (layer.getType()) {
-                case SAMPLE:
-                    setSampleErrors(layer, nextLayer);
+                case samp:
+                    setSampErrors(layer, nextLayer);
                     break;
-                case CONVOLUTIONAL:
-                    setConvolutionalErrors(layer, nextLayer);
+                case conv:
+                    setConvErrors(layer, nextLayer);
                     break;
                 default:
-                    // Only the sampling and convolution layers need to process the residuals, the input layer has no residuals, and the output layer has already processed
-                    break;
+                // Only the sampling and convolution layers need to process the residuals, the input layer has no residuals, and the output layer has already processed
+                break;
             }
         }
     }
@@ -375,10 +410,10 @@ public class NeuralNet implements Serializable {
      * @param nextLayer
      */
 
-    private void setSampleErrors(final Layer layer, final Layer nextLayer) {
-        int mapNum = layer.getOutputCount();
-        final int nextMapNum = nextLayer.getOutputCount();
-        new ConcurenceRunner.TaskManager(mapNum) {
+    private void setSampErrors(final Layer layer, final Layer nextLayer) {
+        int mapNum = layer.getOutMapNum();
+        final int nextMapNum = nextLayer.getOutMapNum();
+        new TaskManager(mapNum) {
 
             @Override
             public void process(int start, int end) {
@@ -389,12 +424,12 @@ public class NeuralNet implements Serializable {
                         double[][] kernel = nextLayer.getKernel(i, j);
                         // A 180 degree rotation of the convolution kernel and convolution in full mode
                         if (sum == null)
-                            sum = Utils.convnFull(nextError, Utils.rot180(kernel));
+                            sum = Util.convnFull(nextError, Util.rot180(kernel));
                         else
-                            sum = Utils.matrixOp(
-                                    Utils.convnFull(nextError,
-                                            Utils.rot180(kernel)), sum, null,
-                                    null, Utils.plus);
+                            sum = Util.matrixOp(
+                                    Util.convnFull(nextError,
+                                            Util.rot180(kernel)), sum, null,
+                                    null, Util.plus);
                     }
                     layer.setError(i, sum);
                 }
@@ -414,11 +449,11 @@ public class NeuralNet implements Serializable {
      * @param nextLayer
      */
 
-    private void setConvolutionalErrors(final Layer layer, final Layer nextLayer) {
+    private void setConvErrors(final Layer layer, final Layer nextLayer) {
         // The next layer of the convolutional layer is the sampling layer, that is, the number of maps in the two layers is the same, and a map is only connected to a map that makes one layer.
         // so we only need to expand the residual kronecker of the next level and use the dot product
-        int mapNum = layer.getOutputCount();
-        new ConcurenceRunner.TaskManager(mapNum) {
+        int mapNum = layer.getOutMapNum();
+        new TaskManager(mapNum) {
 
             @Override
             public void process(int start, int end) {
@@ -427,12 +462,12 @@ public class NeuralNet implements Serializable {
                     double[][] nextError = nextLayer.getError(m);
                     double[][] map = layer.getMap(m);
                     // Matrix multiplication, but 1-value operation for each element value of the second matrix
-                    double[][] outMatrix = Utils.matrixOp(map,
-                            Utils.cloneMatrix(map), null, Utils.one_value,
-                            Utils.multiply);
-                    outMatrix = Utils.matrixOp(outMatrix,
-                            Utils.kronecker(nextError, scale), null, null,
-                            Utils.multiply);
+                    double[][] outMatrix = Util.matrixOp(map,
+                            Util.cloneMatrix(map), null, Util.one_value,
+                            Util.multiply);
+                    outMatrix = Util.matrixOp(outMatrix,
+                            Util.kronecker(nextError, scale), null, null,
+                            Util.multiply);
                     layer.setError(m, outMatrix);
                 }
 
@@ -459,10 +494,10 @@ public class NeuralNet implements Serializable {
      * @return
      */
 
-    private boolean setOutLayerErrors(Dataset.Record record) {
+    private boolean setOutLayerErrors(Record record) {
 
         Layer outputLayer = layers.get(layerNum - 1);
-        int mapNum = outputLayer.getOutputCount();
+        int mapNum = outputLayer.getOutMapNum();
 
         double[] target = new double[mapNum];
         double[] outmaps = new double[mapNum];
@@ -477,7 +512,7 @@ public class NeuralNet implements Serializable {
             outputLayer.setError(m, 0, 0, outmaps[m] * (1 - outmaps[m])
                     * (target[m] - outmaps[m]));
         }
-        return lable == Utils.getMaxIndex(outmaps);
+        return lable == Util.getMaxIndex(outmaps);
     }
 
     /**
@@ -488,20 +523,20 @@ public class NeuralNet implements Serializable {
      * @param record
      */
 
-    private void forward(Dataset.Record record) {
+    private void forward(Record record) {
         // Set the input layer's map
         setInLayerOutput(record);
         for (int l = 1; l < layers.size(); l++) {
             Layer layer = layers.get(l);
             Layer lastLayer = layers.get(l - 1);
             switch (layer.getType()) {
-                case CONVOLUTIONAL: // Calculates the output of the convolutional layer
+                case conv: // Calculates the output of the convolutional layer
                     setConvolutionalOutput(layer, lastLayer);
                     break;
-                case SAMPLE: // Calculate the output of the sampling layer
-                    setSampleOutput(layer, lastLayer);
+                case samp: // Calculate the output of the sampling layer
+                    setSampOutput(layer, lastLayer);
                     break;
-                case OUTPUT: // Calculate the output of the output layer, the output layer is a special convolutional layer
+                case output: // Calculate the output of the output layer, the output layer is a special convolutional layer
                     setConvolutionalOutput(layer, lastLayer);
                     break;
                 default:
@@ -522,9 +557,9 @@ public class NeuralNet implements Serializable {
      * @param record
      */
 
-    private void setInLayerOutput(Dataset.Record record) {
+    private void setInLayerOutput(Record record) {
         final Layer inputLayer = layers.get(0);
-        final Size mapSize = inputLayer.getSize();
+        final Size mapSize = inputLayer.getMapSize();
         final double[] attr = record.getAttrs();
         if (attr.length != mapSize.x * mapSize.y)
             throw new RuntimeException(" The size of the data record does not match the defined map size! ");
@@ -548,9 +583,9 @@ public class NeuralNet implements Serializable {
      */
 
     private void setConvolutionalOutput(final Layer layer, final Layer lastLayer) {
-        int mapNum = layer.getOutputCount();
-        final int lastMapNum = lastLayer.getOutputCount();
-        new ConcurenceRunner.TaskManager(mapNum) {
+        int mapNum = layer.getOutMapNum();
+        final int lastMapNum = lastLayer.getOutMapNum();
+        new TaskManager(mapNum) {
 
             @Override
             public void process(int start, int end) {
@@ -560,23 +595,14 @@ public class NeuralNet implements Serializable {
                         double[][] lastMap = lastLayer.getMap(i);
                         double[][] kernel = layer.getKernel(i, j);
                         if (sum == null)
-                            sum = Utils.convnValid(lastMap, kernel);
+                            sum = Util.convnValid(lastMap, kernel);
                         else
-                            sum = Utils.matrixOp(
-                                    Utils.convnValid(lastMap, kernel), sum,
-                                    null, null, Utils.plus);
+                            sum = Util.matrixOp(
+                                    Util.convnValid(lastMap, kernel), sum,
+                                    null, null, Util.plus);
                     }
                     final double bias = layer.getBias(j);
-                    sum = Utils.matrixOp(sum, new Operator() {
-                        private static final long serialVersionUID = 2469461972825890810L;
-
-                        @Override
-                        public double process(double value) {
-                            return Utils.sigmod(value + bias);
-                        }
-
-                    });
-
+                    sum = Util.matrixOp(sum, (double value) -> Util.sigmod(value + bias));
                     layer.setMapValue(j, sum);
                 }
             }
@@ -599,9 +625,9 @@ public class NeuralNet implements Serializable {
      * @param lastLayer
      */
 
-    private void setSampleOutput(final Layer layer, final Layer lastLayer) {
-        int lastMapNum = lastLayer.getOutputCount();
-        new ConcurenceRunner.TaskManager(lastMapNum) {
+    private void setSampOutput(final Layer layer, final Layer lastLayer) {
+        int lastMapNum = lastLayer.getOutMapNum();
+        new TaskManager(lastMapNum) {
 
             @Override
             public void process(int start, int end) {
@@ -609,7 +635,8 @@ public class NeuralNet implements Serializable {
                     double[][] lastMap = lastLayer.getMap(i);
                     Size scaleSize = layer.getScaleSize();
                     // Mean processing by scaleSize area
-                    double[][] sampMatrix = Utils.scaleMatrix(lastMap, scaleSize);
+                    double[][] sampMatrix = Util
+                            .scaleMatrix(lastMap, scaleSize);
                     layer.setMapValue(i, sampMatrix);
                 }
             }
@@ -631,50 +658,85 @@ public class NeuralNet implements Serializable {
     public void setup(int batchSize) {
         Layer inputLayer = layers.get(0);
         // Each layer needs to initialize the output map
-        inputLayer.initOutputMaps(batchSize);
+        inputLayer.initOutmaps(batchSize);
         for (int i = 1; i < layers.size(); i++) {
             Layer layer = layers.get(i);
             Layer frontLayer = layers.get(i - 1);
-            int frontMapNum = frontLayer.getOutputCount();
+            int frontMapNum = frontLayer.getOutMapNum();
             switch (layer.getType()) {
-                case INPUT:
+                case input:
                     break;
-                case CONVOLUTIONAL:
+                case conv:
                     // Set the size of the map
-                    layer.setSize(frontLayer.getSize().subtract(
+                    layer.setMapSize(frontLayer.getMapSize().subtract(
                             layer.getKernelSize(), 1));
                     // Initialize the convolution kernel with a total of frontMapNum*outMapNum convolution kernels
 
                     layer.initKernel(frontMapNum);
                     // Initialize offset, total of frontMapNum*outMapNum offsets
-                    layer.initBias();
+                    layer.initBias(frontMapNum);
                     // Each record of batch must maintain a residual
                     layer.initErros(batchSize);
                     // Each layer needs to initialize the output map
-                    layer.initOutputMaps(batchSize);
+                    layer.initOutmaps(batchSize);
                     break;
-                case SAMPLE:
+                case samp:
                     // The sampling layer has the same number of maps as the previous layer
-                    layer.setOutputCount(frontMapNum);
+                    layer.setOutMapNum(frontMapNum);
                     // The size of the map layer is the size of the map above the size of the scale
-                    layer.setSize(frontLayer.getSize().divide(
+                    layer.setMapSize(frontLayer.getMapSize().divide(
                             layer.getScaleSize()));
                     // Each record of batch must maintain a residual
                     layer.initErros(batchSize);
                     // Each layer needs to initialize the output map
-                    layer.initOutputMaps(batchSize);
+                    layer.initOutmaps(batchSize);
                     break;
-                case OUTPUT:
+                case output:
                     //The initialization weight (convolution kernel), the output layer convolution kernel size is the map size of the previous layer
-                    layer.initOutputKernel(frontMapNum, frontLayer.getSize());
+                    layer.initOutputKerkel(frontMapNum, frontLayer.getMapSize());
                     // Initialize offset, total of frontMapNum*outMapNum offsets
-                    layer.initBias();
+                    layer.initBias(frontMapNum);
                     // Each record of batch must maintain a residual
                     layer.initErros(batchSize);
                     // Each layer needs to initialize the output map
-                    layer.initOutputMaps(batchSize);
+                    layer.initOutmaps(batchSize);
                     break;
             }
+        }
+    }
+
+    /**
+     * The constructor
+     * mode constructs
+     * each layer, requiring
+     * that the
+     * penultimate layer
+     * must be
+     * the sampling
+     * layer and
+     * not the
+     * convolution layer
+     *
+     * @author jiqunpeng
+     * <p>
+     * Created:2014-7-8 4:54:29PM
+     */
+
+    public static class LayerBuilder {
+        private List<Layer> mLayers;
+
+        public LayerBuilder() {
+            mLayers = new ArrayList<Layer>();
+        }
+
+        public LayerBuilder(Layer layer) {
+            this();
+            mLayers.add(layer);
+        }
+
+        public LayerBuilder addLayer(Layer layer) {
+            mLayers.add(layer);
+            return this;
         }
     }
 
@@ -687,11 +749,11 @@ public class NeuralNet implements Serializable {
 
     public void saveModel(String fileName) {
         try {
-            ObjectOutputStream oos = new ObjectOutputStream(
+            ObjectOutputStream east = new ObjectOutputStream(
                     new FileOutputStream(fileName));
-            oos.writeObject(this);
-            oos.flush();
-            oos.close();
+            east.writeObject(this);
+            east.flush();
+            east.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -705,11 +767,11 @@ public class NeuralNet implements Serializable {
      * @return
      */
 
-    public static NeuralNet loadModel(String fileName) {
+    public static CNN loadModel(String fileName) {
         try {
             ObjectInputStream in = new ObjectInputStream(new FileInputStream(
                     fileName));
-            NeuralNet cnn = (NeuralNet) in.readObject();
+            CNN cnn = (CNN) in.readObject();
             in.close();
             return cnn;
         } catch (IOException | ClassNotFoundException e) {

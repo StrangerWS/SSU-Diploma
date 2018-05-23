@@ -1,6 +1,8 @@
 package com.strangerws.ssu.edu.textanalyzer.neuralnet.api;
 
-public class Size {
+import java.io.Serializable;
+
+public class Size implements Serializable {
 
     public final int x;
     public final int y;
