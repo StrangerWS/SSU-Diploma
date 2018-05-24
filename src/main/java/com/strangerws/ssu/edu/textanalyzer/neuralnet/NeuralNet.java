@@ -153,7 +153,7 @@ public class NeuralNet implements Serializable {
                 double[][] outmap = outputLayer.getMap(m);
                 out[m] = outmap[0][0];
             }
-            if (record.getResult() == Utils.getMaxIndex(out))
+            if ((int)record.getResult() == Utils.getMaxIndex(out))
                 right++;
         }
         double p = 1.0 * right / trainset.size();
@@ -561,8 +561,6 @@ public class NeuralNet implements Serializable {
                     }
                     final double bias = layer.getBias(j);
                     sum = Utils.matrixOp(sum, new Operator() {
-                        private static final long serialVersionUID = 2469461972825890810L;
-
                         @Override
                         public double process(double value) {
                             return Utils.sigmod(value + bias);

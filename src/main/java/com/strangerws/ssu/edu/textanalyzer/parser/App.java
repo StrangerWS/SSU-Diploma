@@ -28,7 +28,7 @@ import static org.bytedeco.javacpp.opencv_imgproc.*;
 
 public class App {
     private final static String IMAGEPATH = "C:\\Users\\StrangerWS\\IdeaProjects\\SSU-Diploma\\src\\main\\resources\\sample\\test.png";
-    private final static int SIZE = 60;
+    private final static int SIZE = 28;
 
     public static BufferedImage IplImageToBufferedImage(IplImage src) {
         OpenCVFrameConverter.ToIplImage grabberConverter = new OpenCVFrameConverter.ToIplImage();
@@ -107,16 +107,16 @@ public class App {
         LayerBuilder builder = new LayerBuilder();
         builder
                 .addLayer(Layer.buildInputLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(SIZE, SIZE)))
-                .addLayer(Layer.buildConvolutionalLayer(6, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(15, 15)))
+                .addLayer(Layer.buildConvolutionalLayer(6, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5, 5)))
                 .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2, 2)))
-                .addLayer(Layer.buildConvolutionalLayer(12, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(15, 15)))
-                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(3, 3)))
+                .addLayer(Layer.buildConvolutionalLayer(12, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5, 5)))
+                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2, 2)))
                 .addLayer(Layer.buildOutputLayer(80));
-        NeuralNet cnn = new NeuralNet(builder, 100);
+        NeuralNet cnn = new NeuralNet(builder, 10);
         dataset.setDataset(getTrainingData(), getTrainingAnswers());
         dataset.shuffle();
 
-        cnn.train(dataset, 50);
+        cnn.train(dataset, 30);
 
 //        imshow(result);//save final result
     }
