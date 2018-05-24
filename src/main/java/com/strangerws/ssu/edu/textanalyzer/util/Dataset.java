@@ -1,24 +1,30 @@
 package com.strangerws.ssu.edu.textanalyzer.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-public class Dataset{
+public class Dataset {
     private List<Entry> data;
 
-    public void setDataset(List<byte[]> data, List<Character> result){
-        if(data.size() != result.size()){
+    public void setDataset(List<byte[]> data, List<Double> result) {
+        if (data.size() != result.size()) {
             throw new RuntimeException("arrays length do not match each other");
         }
 
         for (int i = 0; i < data.size(); i++) {
             appendEntry(data.get(i), result.get(i));
         }
-
     }
 
-    public Iterator<Entry> iterator(){
+    public void setDataset(List<byte[]> data) {
+        for (byte[] dataEntry : data) {
+            appendEntry(dataEntry, 0);
+        }
+    }
+
+    public Iterator<Entry> iterator() {
         return data.iterator();
     }
 
@@ -26,26 +32,31 @@ public class Dataset{
         this.data = new ArrayList<>();
     }
 
-    public void appendEntry(byte[] data, Character result){
+    public void shuffle() {
+        Collections.shuffle(data);
+    }
+
+    public void appendEntry(byte[] data, double result) {
         this.data.add(new Entry(data, result));
     }
-    public void appendEntry(Entry entry){
+
+    public void appendEntry(Entry entry) {
         this.data.add(entry);
     }
 
-    public int size(){
+    public int size() {
         return data.size();
     }
 
-    public Entry get(int index){
+    public Entry get(int index) {
         return data.get(index);
     }
 
-    public static class Entry{
+    public static class Entry {
         private byte[] data;
-        private Character result;
+        private double result;
 
-        public Entry(byte[] data, Character result) {
+        public Entry(byte[] data, double result) {
             this.data = data;
             this.result = result;
         }
@@ -58,7 +69,7 @@ public class Dataset{
             this.data = data;
         }
 
-        public Character getResult() {
+        public double getResult() {
             return result;
         }
 

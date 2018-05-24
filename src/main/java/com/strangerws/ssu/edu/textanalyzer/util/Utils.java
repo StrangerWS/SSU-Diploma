@@ -616,7 +616,7 @@ public class Utils {
         return index;
     }
 
-    public static String fomart(double[] data) {
+    public static String format(double[] data) {
         StringBuilder sb = new StringBuilder("[");
         for (double each : data)
             sb.append(String.format("%4f,", each));

@@ -7,20 +7,12 @@ import com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size;
 import com.strangerws.ssu.edu.textanalyzer.neuralnet.element.Layer;
 import com.strangerws.ssu.edu.textanalyzer.util.Dataset;
 import com.strangerws.ssu.edu.textanalyzer.util.Utils;
+import com.strangerws.ssu.edu.textanalyzer.util.Utils.Operator;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
-import java.io.Serializable;
+import java.io.*;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.strangerws.ssu.edu.textanalyzer.util.Utils.*;
 
 public class NeuralNet implements Serializable {
     /**
@@ -218,19 +210,19 @@ public class NeuralNet implements Serializable {
 
     /**
      * Train a
-     * record while
+     * entry while
      * returning whether
      * the correct
-     * current record
+     * current entry
      * is predicted
      *
-     * @param record
+     * @param entry
      * @return
      */
 
-    private boolean train(Dataset.Entry record) {
-        forward(record);
-        boolean result = backPropagation(record);
+    private boolean train(Dataset.Entry entry) {
+        forward(entry);
+        boolean result = backPropagation(entry);
         return result;
         // System.exit(0);
     }
@@ -472,26 +464,26 @@ public class NeuralNet implements Serializable {
             outmaps[m] = outmap[0][0];
 
         }
-        Character lable = record.getResult();
-        target[lable] = 1;
+        int resultId = (int) record.getResult();//getting number of suggested neuron
+        target[resultId] = 1;//setting max response value to target
         for (int m = 0; m < mapNum; m++) {
             outputLayer.setError(m, 0, 0, outmaps[m] * (1 - outmaps[m])
                     * (target[m] - outmaps[m]));
         }
-        return lable == Utils.getMaxIndex(outmaps);
+        return resultId == Utils.getMaxIndex(outmaps);
     }
 
     /**
      * Forward calculation
      * of a
-     * record
+     * entry
      *
-     * @param record
+     * @param entry
      */
 
-    private void forward(Dataset.Entry record) {
+    private void forward(Dataset.Entry entry) {
         // Set the input layer's map
-        setInLayerOutput(record);
+        setInLayerOutput(entry);
         for (int l = 1; l < layers.size(); l++) {
             Layer layer = layers.get(l);
             Layer lastLayer = layers.get(l - 1);
