@@ -8,7 +8,7 @@ import java.util.List;
 public class Dataset {
     private List<Entry> data;
 
-    public void setDataset(List<byte[]> data, List<Double> result) {
+    public void setDataset(List<double[]> data, List<Double> result) {
         if (data.size() != result.size()) {
             throw new RuntimeException("arrays length do not match each other");
         }
@@ -18,8 +18,8 @@ public class Dataset {
         }
     }
 
-    public void setDataset(List<byte[]> data) {
-        for (byte[] dataEntry : data) {
+    public void setDataset(List<double[]> data) {
+        for (double[] dataEntry : data) {
             appendEntry(dataEntry, 0);
         }
     }
@@ -36,7 +36,7 @@ public class Dataset {
         Collections.shuffle(data);
     }
 
-    public void appendEntry(byte[] data, double result) {
+    public void appendEntry(double[] data, double result) {
         this.data.add(new Entry(data, result));
     }
 
@@ -53,19 +53,19 @@ public class Dataset {
     }
 
     public static class Entry {
-        private byte[] data;
+        private double[] data;
         private double result;
 
-        public Entry(byte[] data, double result) {
+        public Entry(double[] data, double result) {
             this.data = data;
             this.result = result;
         }
 
-        public byte[] getData() {
+        public double[] getData() {
             return data;
         }
 
-        public void setData(byte[] data) {
+        public void setData(double[] data) {
             this.data = data;
         }
 

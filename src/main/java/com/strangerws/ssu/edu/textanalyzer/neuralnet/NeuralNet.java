@@ -518,7 +518,7 @@ public class NeuralNet implements Serializable {
     private void setInLayerOutput(Dataset.Entry entry) {
         final Layer inputLayer = layers.get(0);
         final Size mapSize = inputLayer.getSize();
-        final byte[] attr = entry.getData();
+        final double[] attr = entry.getData();
         if (attr.length != mapSize.x * mapSize.y)
             throw new RuntimeException(" The size of the data record does not match the defined map size! ");
         for (int i = 0; i < mapSize.x; i++) {

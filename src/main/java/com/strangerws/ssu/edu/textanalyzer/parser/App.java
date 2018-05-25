@@ -1,13 +1,14 @@
 package com.strangerws.ssu.edu.textanalyzer.parser;
 
+import CNN.src.edu.hitsz.c102c.util.ConcurenceRunner;
+import CNN.src.edu.hitsz.c102c.util.TimedTest;
 import com.strangerws.ssu.edu.textanalyzer.neuralnet.LayerBuilder;
 import com.strangerws.ssu.edu.textanalyzer.neuralnet.NeuralNet;
 import com.strangerws.ssu.edu.textanalyzer.neuralnet.element.Layer;
 import com.strangerws.ssu.edu.textanalyzer.util.Dataset;
-import com.strangerws.ssu.edu.textanalyzer.util.RectComparator;
-import org.bytedeco.javacpp.Loader;
-import org.bytedeco.javacpp.opencv_core.*;
-import org.bytedeco.javacpp.opencv_imgproc;
+import org.bytedeco.javacpp.opencv_core.IplImage;
+import org.bytedeco.javacpp.opencv_core.Mat;
+import org.bytedeco.javacpp.opencv_core.Size;
 import org.bytedeco.javacv.CanvasFrame;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
@@ -17,17 +18,15 @@ import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import static org.bytedeco.javacpp.helper.opencv_core.CV_RGB;
-import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_imgcodecs.cvLoadImage;
-import static org.bytedeco.javacpp.opencv_imgproc.*;
+import static org.bytedeco.javacpp.opencv_imgproc.INTER_CUBIC;
+import static org.bytedeco.javacpp.opencv_imgproc.resize;
 
 
 public class App {
-    private final static String IMAGEPATH = "C:\\Users\\StrangerWS\\IdeaProjects\\SSU-Diploma\\src\\main\\resources\\sample\\test.png";
+    private final static String IMAGEPATH = "src\\main\\resources\\sample\\test.png";
     private final static int SIZE = 28;
 
     public static BufferedImage IplImageToBufferedImage(IplImage src) {
@@ -101,29 +100,15 @@ public class App {
 //            //Send letters by one and print it
 //        }
 
-
-        Dataset dataset = new Dataset();
-
-        LayerBuilder builder = new LayerBuilder();
-        builder
-                .addLayer(Layer.buildInputLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(SIZE, SIZE)))
-                .addLayer(Layer.buildConvolutionalLayer(6, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5, 5)))
-                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2, 2)))
-                .addLayer(Layer.buildConvolutionalLayer(12, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5, 5)))
-                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2, 2)))
-                .addLayer(Layer.buildOutputLayer(80));
-        NeuralNet cnn = new NeuralNet(builder, 10);
-        dataset.setDataset(getTrainingData(), getTrainingAnswers());
-        dataset.shuffle();
-
-        cnn.train(dataset, 30);
+        new TimedTest(() -> runNet(), 1).test();
+        ConcurenceRunner.stop();
 
 //        imshow(result);//save final result
     }
 
-    private static List<byte[]> getTrainingData() {
-        List<byte[]> result = new ArrayList<>();
-        String pathBegin = "C:\\Users\\StrangerWS\\IdeaProjects\\SSU-Diploma\\src\\main\\resources\\trainingData\\";
+    public static List<double[]> getTrainingData() {
+        List<double[]> result = new ArrayList<>();
+        String pathBegin = "src\\main\\resources\\trainingData\\";
         StringBuilder path;
 
         for (int i = 1; i < 80; i++) {
@@ -137,14 +122,23 @@ public class App {
                 Mat mat = new Mat(cvLoadImage(path.toString()));
                 resize(mat, mat, new Size(SIZE, SIZE), 0, 0, INTER_CUBIC);
                 mat.data().get(tmp);
-                result.add(tmp);
+                result.add(doubleCast(tmp));
             }
         }
 
         return result;
     }
 
-    private static List<Double> getTrainingAnswers() {
+    private static double[] doubleCast(byte[] tmp) {
+        double[] casted = new double[tmp.length];
+        for (int i = 0; i < tmp.length; i++) {
+            casted[i] = tmp[i] < 0 ? 0 : 1;
+            //casted[i] = (tmp[i] + 128) / 255;
+        }
+        return casted;
+    }
+
+    public static List<Double> getTrainingAnswers() {
         List<Double> result = new ArrayList<>();
 
         for (int i = 1; i < 80; i++) {
@@ -154,6 +148,24 @@ public class App {
         }
 
         return result;
+    }
+
+    private static void runNet() {
+        Dataset dataset = new Dataset();
+
+        LayerBuilder builder = new LayerBuilder();
+        builder
+                .addLayer(Layer.buildInputLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(SIZE, SIZE)))
+                .addLayer(Layer.buildConvolutionalLayer(6, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5, 5)))
+                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2, 2)))
+                .addLayer(Layer.buildConvolutionalLayer(12, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5, 5)))
+                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2, 2)))
+                .addLayer(Layer.buildOutputLayer(80));
+        NeuralNet cnn = new NeuralNet(builder, 500);
+        dataset.setDataset(getTrainingData(), getTrainingAnswers());
+        dataset.shuffle();
+
+        cnn.train(dataset, 30);
     }
 
     private static void imshow(Mat img) {

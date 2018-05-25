@@ -4,10 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class Dataset {
     // ��������
@@ -30,7 +27,7 @@ public class Dataset {
         }
     }
 
-    private Dataset() {
+    public Dataset() {
         this.lableIndex = -1;
         records = new ArrayList<Record>();
     }
@@ -43,7 +40,7 @@ public class Dataset {
         return lableIndex;
     }
 
-    public void append(Record record) {
+    private void append(Record record) {
         records.add(record);
     }
 
@@ -62,6 +59,7 @@ public class Dataset {
      */
     public void append(double[] attrs, Double lable) {
         records.add(new Record(attrs, lable));
+        lableIndex = lableIndex == -1 ? 1 : lableIndex + 1;
     }
 
     public Iterator<Record> iter() {
@@ -114,8 +112,12 @@ public class Dataset {
             e.printStackTrace();
             return null;
         }
-        System.out.println("��������:" + dataset.size());
+        System.out.println("Import data:" + dataset.size());
         return dataset;
+    }
+
+    public void shuffle() {
+        Collections.shuffle(records);
     }
 
     /**
