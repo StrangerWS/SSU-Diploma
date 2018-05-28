@@ -3,6 +3,7 @@ package com.strangerws.ssu.edu.textanalyzer.neuralnet;
 
 import CNN.src.edu.hitsz.c102c.util.ConcurenceRunner;
 import CNN.src.edu.hitsz.c102c.util.Log;
+import CNN.src.edu.hitsz.c102c.util.Util;
 import com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size;
 import com.strangerws.ssu.edu.textanalyzer.neuralnet.element.Layer;
 import com.strangerws.ssu.edu.textanalyzer.util.Dataset;
@@ -42,10 +43,10 @@ public class NeuralNet implements Serializable {
     /**
      * Initialize the network
      *
-     * @param layerBuilder Network layer
+     * @param layers Network layer
      */
-    public NeuralNet(LayerBuilder layerBuilder, final int batchSize) {
-        layers = layerBuilder.getLayers();
+    public NeuralNet(List<Layer> layers, final int batchSize) {
+        this.layers = layers;
         layerNum = layers.size();
         this.batchSize = batchSize;
         setup(batchSize);
@@ -153,7 +154,7 @@ public class NeuralNet implements Serializable {
                 double[][] outmap = outputLayer.getMap(m);
                 out[m] = outmap[0][0];
             }
-            if ((int)record.getResult() == Utils.getMaxIndex(out))
+            if ((int) record.getResult() == Utils.getMaxIndex(out))
                 right++;
         }
         double p = 1.0 * right / trainset.size();
@@ -222,8 +223,7 @@ public class NeuralNet implements Serializable {
 
     private boolean train(Dataset.Entry entry) {
         forward(entry);
-        boolean result = backPropagation(entry);
-        return result;
+        return backPropagation(entry);
         // System.exit(0);
     }
 
@@ -453,7 +453,6 @@ public class NeuralNet implements Serializable {
      */
 
     private boolean setOutLayerErrors(Dataset.Entry record) {
-
         Layer outputLayer = layers.get(layerNum - 1);
         int mapNum = outputLayer.getOutputCount();
 
@@ -461,7 +460,13 @@ public class NeuralNet implements Serializable {
         double[] outmaps = new double[mapNum];
         for (int m = 0; m < mapNum; m++) {
             double[][] outmap = outputLayer.getMap(m);
-            outmaps[m] = outmap[0][0];
+            double sum = 0;
+            for (double[] anOutmap : outmap) {
+                for (double anAnOutmap : anOutmap) {
+                    sum += anAnOutmap;
+                }
+            }
+            outmaps[m] = sum;
 
         }
         int resultId = (int) record.getResult();//getting number of suggested neuron
@@ -470,6 +475,7 @@ public class NeuralNet implements Serializable {
             outputLayer.setError(m, 0, 0, outmaps[m] * (1 - outmaps[m])
                     * (target[m] - outmaps[m]));
         }
+        System.out.println("expected: " + resultId + "\tactual: " + Utils.getMaxIndex(outmaps));
         return resultId == Utils.getMaxIndex(outmaps);
     }
 

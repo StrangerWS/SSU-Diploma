@@ -23,23 +23,23 @@ import java.util.List;
  */
 
 public class LayerBuilder {
-    private List<Layer> mLayers;
+    private List<Layer> layers;
 
-    public List<Layer> getLayers() {
-        return mLayers;
+    public List<Layer> build() {
+        return layers;
     }
 
     public LayerBuilder() {
-        mLayers = new ArrayList<Layer>();
+        layers = new ArrayList<>();
     }
 
     public LayerBuilder(Layer layer) {
         this();
-        mLayers.add(layer);
+        layers.add(layer);
     }
 
     public LayerBuilder addLayer(Layer layer) {
-        mLayers.add(layer);
+        layers.add(layer);
         return this;
     }
 }
