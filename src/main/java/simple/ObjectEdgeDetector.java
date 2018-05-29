@@ -8,7 +8,7 @@ package simple;
 import com.strangerws.ssu.edu.textanalyzer.util.Matrix;
 
 public class ObjectEdgeDetector {
-    private static int darkValue = 150;
+    private static int darkValue = 120;
     private static int buffer = 1;
 
     /**

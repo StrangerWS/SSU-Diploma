@@ -1,17 +1,14 @@
 package com.strangerws.ssu.edu.textanalyzer.parser;
 
-import CNN.src.edu.hitsz.c102c.util.ConcurenceRunner;
-import CNN.src.edu.hitsz.c102c.util.TimedTest;
-import com.strangerws.ssu.edu.textanalyzer.neuralnet.LayerBuilder;
-import com.strangerws.ssu.edu.textanalyzer.neuralnet.NeuralNet;
-import com.strangerws.ssu.edu.textanalyzer.neuralnet.element.Layer;
-import com.strangerws.ssu.edu.textanalyzer.util.Dataset;
-import com.strangerws.ssu.edu.textanalyzer.util.RectComparator;
-import org.bytedeco.javacpp.Loader;
+
+import javacnn.cnn.CNN;
+import javacnn.cnn.Layer;
+import javacnn.dataset.Dataset;
+import javacnn.util.ConcurenceRunner;
+import javacnn.util.Log;
+import org.bytedeco.javacpp.opencv_core;
 import org.bytedeco.javacpp.opencv_core.IplImage;
 import org.bytedeco.javacpp.opencv_core.Mat;
-import org.bytedeco.javacpp.opencv_core.Size;
-import org.bytedeco.javacpp.opencv_imgproc;
 import org.bytedeco.javacv.CanvasFrame;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
@@ -22,14 +19,12 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
-import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_imgcodecs.CV_LOAD_IMAGE_GRAYSCALE;
 import static org.bytedeco.javacpp.opencv_imgcodecs.cvLoadImage;
-import static org.bytedeco.javacpp.opencv_imgcodecs.imwrite;
-import static org.bytedeco.javacpp.opencv_imgproc.*;
+import static org.bytedeco.javacpp.opencv_imgproc.INTER_CUBIC;
+import static org.bytedeco.javacpp.opencv_imgproc.resize;
 
 
 public class App {
@@ -105,9 +100,7 @@ public class App {
 //            //Send letters by one and print it
 //        }
 
-        new TimedTest(() -> runNet(), 1).test();
-        ConcurenceRunner.stop();
-
+        runNet();
 //        imwrite("src\\main\\resources\\output\\result.jpg", result);//save final result
     }
 
@@ -125,7 +118,7 @@ public class App {
                         .append(".png");
                 byte[] tmp = new byte[SIZE * SIZE];
                 Mat mat = new Mat(cvLoadImage(path.toString(), CV_LOAD_IMAGE_GRAYSCALE));
-                resize(mat, mat, new Size(SIZE, SIZE), 0, 0, INTER_CUBIC);
+                resize(mat, mat, new opencv_core.Size(SIZE, SIZE), 0, 0, INTER_CUBIC);
                 mat.data().get(tmp);
                 result.add(doubleCast(tmp));
             }
@@ -138,7 +131,6 @@ public class App {
         double[] casted = new double[tmp.length];
         for (int i = 0; i < tmp.length; i++) {
             casted[i] = tmp[i] < 0 ? 0 : 1;
-            //casted[i] = (tmp[i] + 128) / 255;
         }
         return casted;
     }
@@ -158,19 +150,19 @@ public class App {
     private static void runNet() {
         Dataset dataset = new Dataset();
 
-        LayerBuilder builder = new LayerBuilder();
-        builder
-                .addLayer(Layer.buildInputLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(SIZE, SIZE)))
-                .addLayer(Layer.buildConvolutionalLayer(6, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5, 5)))
-                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2, 2)))
-                .addLayer(Layer.buildConvolutionalLayer(12, new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(5, 5)))
-                .addLayer(Layer.buildSampleLayer(new com.strangerws.ssu.edu.textanalyzer.neuralnet.api.Size(2, 2)))
-                .addLayer(Layer.buildOutputLayer(80));
-        NeuralNet cnn = new NeuralNet(builder.build(), 5);
-        dataset.setDataset(getTrainingData(), getTrainingAnswers());
-        dataset.shuffle();
+        final ConcurenceRunner concurenceRunner = new ConcurenceRunner();
+        CNN.LayerBuilder builder = new CNN.LayerBuilder();
+        builder.addLayer(Layer.buildInputLayer(new javacnn.cnn.Layer.Size(SIZE, SIZE)));
+        builder.addLayer(Layer.buildConvLayer(6, new javacnn.cnn.Layer.Size(5, 5)));
+        builder.addLayer(Layer.buildSampLayer(new javacnn.cnn.Layer.Size(2, 2)));
+        builder.addLayer(Layer.buildConvLayer(12, new javacnn.cnn.Layer.Size(5, 5)));
+        builder.addLayer(Layer.buildSampLayer(new javacnn.cnn.Layer.Size(2, 2)));
+        builder.addLayer(Layer.buildOutputLayer(80));
+        CNN cnn = new CNN(builder, 50, concurenceRunner);
+        setDataset(dataset);
+        Log.switchOn();
+        cnn.train(dataset, 100);
 
-        cnn.train(dataset, 300);
     }
 
     private static void imshow(String mock, Mat img) {
@@ -180,5 +172,27 @@ public class App {
         canvasFrame.showImage(new OpenCVFrameConverter.ToMat().convert(img));
     }
 
+
+    private static void setDataset(Dataset dataset){
+        String pathBegin = "src\\main\\resources\\trainingData\\";
+        StringBuilder path;
+        for (int i = 1; i < 80; i++) {
+            for (int j = 1; j <= 30; j++) {
+                path = new StringBuilder(pathBegin)
+                        .append(i)
+                        .append("\\")
+                        .append(j)
+                        .append(".png");
+                byte[] tmp = new byte[SIZE * SIZE];
+                Mat mat = new Mat(cvLoadImage(path.toString(), CV_LOAD_IMAGE_GRAYSCALE));
+                resize(mat, mat, new opencv_core.Size(SIZE, SIZE), 0, 0, INTER_CUBIC);
+                mat.data().get(tmp);
+                dataset.append(doubleCast(tmp), (double)i);
+                System.out.println(Arrays.toString(doubleCast(tmp)));
+            }
+        }
+
+        dataset.shuffle();
+    }
 
 }

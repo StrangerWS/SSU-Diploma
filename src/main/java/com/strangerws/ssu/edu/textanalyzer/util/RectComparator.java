@@ -3,13 +3,6 @@ package com.strangerws.ssu.edu.textanalyzer.util;
 import java.util.Comparator;
 import org.bytedeco.javacpp.opencv_core;
 
-/**
- *
- * @author Taha Emara
- * Website: http://www.emaraic.com
- * Email  : taha@emaraic.com
- * Created on: Feb 14, 2018
- */
 public class RectComparator implements Comparator<opencv_core.Rect> {
 
     @Override

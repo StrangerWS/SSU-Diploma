@@ -17,7 +17,7 @@ public class Predict {
 
     public static void main(String[] args) throws Exception {
 
-        String sampleImage = "src/main/resources/sample/test4.png";
+        String sampleImage = "src/main/resources/sample/testfont2.png";
         String experience = "src/main/resources/knowledge/KnowledgeAlphabet.log";
         String output = sampleImage + "Content.txt";
 
