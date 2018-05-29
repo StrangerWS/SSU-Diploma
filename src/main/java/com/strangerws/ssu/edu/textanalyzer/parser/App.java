@@ -157,7 +157,7 @@ public class App {
         builder.addLayer(Layer.buildSampLayer(new javacnn.cnn.Layer.Size(2, 2)));
         builder.addLayer(Layer.buildConvLayer(12, new javacnn.cnn.Layer.Size(5, 5)));
         builder.addLayer(Layer.buildSampLayer(new javacnn.cnn.Layer.Size(2, 2)));
-        builder.addLayer(Layer.buildOutputLayer(80));
+        builder.addLayer(Layer.buildOutputLayer(27));
         CNN cnn = new CNN(builder, 50, concurenceRunner);
         setDataset(dataset);
         Log.switchOn();
@@ -173,22 +173,23 @@ public class App {
     }
 
 
-    private static void setDataset(Dataset dataset){
+    private static void setDataset(Dataset dataset) {
         String pathBegin = "src\\main\\resources\\trainingData\\";
         StringBuilder path;
-        for (int i = 1; i < 80; i++) {
-            for (int j = 1; j <= 30; j++) {
-                path = new StringBuilder(pathBegin)
-                        .append(i)
-                        .append("\\")
-                        .append(j)
-                        .append(".png");
-                byte[] tmp = new byte[SIZE * SIZE];
-                Mat mat = new Mat(cvLoadImage(path.toString(), CV_LOAD_IMAGE_GRAYSCALE));
-                resize(mat, mat, new opencv_core.Size(SIZE, SIZE), 0, 0, INTER_CUBIC);
-                mat.data().get(tmp);
-                dataset.append(doubleCast(tmp), (double)i);
-                System.out.println(Arrays.toString(doubleCast(tmp)));
+        for (int l = 0; l < 10; l++) {
+            for (int i = 1; i <= 26; i++) {
+                for (int j = 1; j <= 30; j++) {
+                    path = new StringBuilder(pathBegin)
+                            .append(i)
+                            .append("\\")
+                            .append(j)
+                            .append(".png");
+                    byte[] tmp = new byte[SIZE * SIZE];
+                    Mat mat = new Mat(cvLoadImage(path.toString(), CV_LOAD_IMAGE_GRAYSCALE));
+                    resize(mat, mat, new opencv_core.Size(SIZE, SIZE), 0, 0, INTER_CUBIC);
+                    mat.data().get(tmp);
+                    dataset.append(doubleCast(tmp), (double) i);
+                }
             }
         }
 
