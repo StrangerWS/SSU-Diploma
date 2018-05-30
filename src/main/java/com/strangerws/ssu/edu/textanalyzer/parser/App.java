@@ -47,7 +47,7 @@ public class App {
         App app = new App();
         List<byte[]> letters = new ArrayList<>();
 
-        for (int i = 1; i <= 3; i++) {
+
             double time = System.currentTimeMillis();
             processImage(letters);
             time = System.currentTimeMillis() - time;
@@ -57,8 +57,6 @@ public class App {
             runNet(letters);
             time = System.currentTimeMillis() - time;
             System.out.println("Overall CNN work time: " + time);
-            System.out.println("===End of try "+ i + "===\n\n");
-        }
     }
 
     public static List<double[]> getTrainingData() {
